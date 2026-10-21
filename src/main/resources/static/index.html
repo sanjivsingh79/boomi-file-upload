@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Boomi File Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 650px;
+            margin: 60px auto;
+            padding: 20px;
+            color: #222;
+        }
+
+        h1 { font-size: 26px; }
+
+        label {
+            display: block;
+            margin: 20px 0 8px;
+            font-weight: bold;
+        }
+
+        input, select, button {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 11px;
+            font-size: 15px;
+        }
+
+        button {
+            margin-top: 24px;
+            background: #1769aa;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #888;
+            cursor: wait;
+        }
+
+        #status {
+            margin-top: 20px;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Transfer Portal</h1>
+    <p>Select a file and destination to submit a transfer request.</p>
+
+    <form id="uploadForm">
+        <label for="file">Select file</label>
+        <input type="file" id="file" name="file" required>
+
+        <label for="destination">Destination</label>
+        <select id="destination" name="destination" required>
+            <option value="">-- Select destination --</option>
+            <option value="DOXIS">Doxis</option>
+            <option value="SFTP">SFTP server</option>
+        </select>
+
+        <button id="uploadButton" type="submit">Upload file</button>
+    </form>
+
+    <div id="status" role="status" aria-live="polite"></div>
+
+    <script>
+        const form = document.getElementById("uploadForm");
+        const button = document.getElementById("uploadButton");
+        const status = document.getElementById("status");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const file = document.getElementById("file").files[0];
+            const destination = document.getElementById("destination").value;
+
+            if (!file || !destination) {
+                status.textContent = "Select a file and destination.";
+                return;
+            }
+
+            const data = new FormData();
+            data.append("file", file);
+            data.append("destination", destination);
+
+            button.disabled = true;
+            status.textContent = "Submitting upload...";
+
+            try {
+                const response = await fetch("/api/transfers", {
+                    method: "POST",
+                    body: data
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || "Upload failed.");
+                }
+
+                status.textContent =
+                    "Accepted by local application. Reference: " +
+                    result.transferId + ". Destination: " +
+                    result.destination + ".";
+            } catch (error) {
+                status.textContent = "Error: " + error.message;
+            } finally {
+                button.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
